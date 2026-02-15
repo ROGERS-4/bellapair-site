@@ -1,11 +1,13 @@
 // api/pair.js
 const crypto = require('crypto');
 
-// In-memory storage (Vercel compatible)
+// In-memory storage
 const codes = new Map();
 
+// Your BWM panel pairing service URL
+const BOT_PAIR_SERVICE = 'http://localhost:3001'; // Change to your BWM panel IP
+
 export default async function handler(req, res) {
-    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -24,24 +26,32 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Phone number required' });
         }
 
-        // Clean phone number
         const cleanPhone = phone.replace(/\D/g, '');
-        
-        // Generate 8-digit code
         const code = Math.floor(10000000 + Math.random() * 90000000).toString();
         
-        // Store temporarily (in production, use Redis or database)
+        // Store in memory
         codes.set(code, {
             phone: cleanPhone,
             createdAt: Date.now(),
-            used: false,
+            status: 'pending',
             paired: false
         });
 
-        // Clean old codes every hour
+        // Notify bot service about new pairing request
+        try {
+            await fetch(`${BOT_PAIR_SERVICE}/new-pair`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, phone: cleanPhone })
+            });
+        } catch (e) {
+            console.log('Bot service not reachable, will retry later');
+        }
+
+        // Auto cleanup after 15 minutes
         setTimeout(() => {
             codes.delete(code);
-        }, 15 * 60 * 1000); // 15 minutes
+        }, 15 * 60 * 1000);
 
         return res.json({ 
             success: true, 
@@ -64,7 +74,7 @@ export default async function handler(req, res) {
             return res.json({ valid: false, reason: 'expired' });
         }
 
-        // Check if expired (15 minutes)
+        // Check if expired
         if (Date.now() - session.createdAt > 15 * 60 * 1000) {
             codes.delete(code);
             return res.json({ valid: false, reason: 'expired' });
@@ -73,23 +83,26 @@ export default async function handler(req, res) {
         return res.json({ 
             valid: true, 
             phone: session.phone,
-            used: session.used,
+            status: session.status,
             paired: session.paired
         });
     }
 
-    // ===== MARK AS PAIRED =====
-    else if (action === 'paired' && req.method === 'POST') {
+    // ===== PAIRING SUCCESS CALLBACK FROM BOT =====
+    else if (action === 'pairing-success' && req.method === 'POST') {
         const { code } = req.body;
         
         const session = codes.get(code);
         if (session) {
             session.paired = true;
+            session.status = 'paired';
             session.pairedAt = Date.now();
             codes.set(code, session);
+            
+            return res.json({ success: true });
         }
         
-        return res.json({ success: true });
+        return res.json({ success: false, error: 'Code not found' });
     }
 
     // ===== GET CHANNEL LINK =====
