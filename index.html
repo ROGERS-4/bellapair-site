@@ -1,47 +1,753 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>QUEEN BELLA - Pairing</title>
-    <style>
-        body { font-family: Arial; max-width: 500px; margin: 50px auto; padding: 20px; }
-        input, button { padding: 10px; margin: 5px; width: 100%; }
-        .code { font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; }
-    </style>
-</head>
-<body>
-    <h1>🔐 QUEEN BELLA V1 Pairing</h1>
-    
-    <div id="step1">
-        <h3>Enter your 8-digit code:</h3>
-        <input type="text" id="pairCode" maxlength="8" placeholder="Enter code">
-        <button onclick="verifyCode()">Verify Code</button>
-    </div>
-    
-    <div id="step2" style="display:none;">
-        <h3>Your session is ready!</h3>
-        <p>Click below to download your session file:</p>
-        <button onclick="downloadSession()">Download Session</button>
-    </div>
-    
-    <script>
-        function verifyCode() {
-            const code = document.getElementById('pairCode').value;
-            if(code.length === 8) {
-                // Send to your backend
-                fetch(`/verify?code=${code}`)
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.valid) {
-                            document.getElementById('step1').style.display = 'none';
-                            document.getElementById('step2').style.display = 'block';
-                        }
-                    });
+// website/server.js
+const express = require('express');
+const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const crypto = require('crypto');
+const fs = require('fs-extra');
+const path = require('path');
+const cors = require('cors');
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(express.static('public'));
+
+// Store active pairing sessions
+const activeSessions = new Map();
+
+// Clean old sessions every hour
+setInterval(() => {
+    const now = Date.now();
+    for (let [code, session] of activeSessions) {
+        if (now > session.expiresAt) {
+            activeSessions.delete(code);
+            // Clean up session folder
+            const sessionPath = path.join(__dirname, 'sessions', `session_${code}`);
+            if (fs.existsSync(sessionPath)) {
+                fs.removeSync(sessionPath);
             }
         }
+    }
+}, 60 * 60 * 1000);
+
+// Generate random 8-digit code
+function generatePairCode() {
+    return crypto.randomInt(10000000, 99999999).toString();
+}
+
+// ===== PAGE 1: Enter Phone Number =====
+app.get('/', (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>QUEEN BELLA V1 - Pairing</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                animation: slideUp 0.5s ease;
+            }
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            h1 {
+                color: #333;
+                margin-bottom: 10px;
+                font-size: 28px;
+                text-align: center;
+            }
+            .subtitle {
+                color: #666;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 14px;
+            }
+            .bot-name {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-weight: bold;
+            }
+            .form-group {
+                margin-bottom: 25px;
+            }
+            label {
+                display: block;
+                margin-bottom: 8px;
+                color: #555;
+                font-weight: 500;
+                font-size: 14px;
+            }
+            input {
+                width: 100%;
+                padding: 15px;
+                border: 2px solid #e0e0e0;
+                border-radius: 12px;
+                font-size: 16px;
+                transition: all 0.3s;
+                outline: none;
+            }
+            input:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+            }
+            input::placeholder {
+                color: #999;
+            }
+            button {
+                width: 100%;
+                padding: 15px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+            }
+            button:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+            .footer {
+                margin-top: 25px;
+                text-align: center;
+                color: #999;
+                font-size: 13px;
+            }
+            .footer a {
+                color: #667eea;
+                text-decoration: none;
+            }
+            .alert {
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                display: none;
+            }
+            .alert.error {
+                background: #fee;
+                color: #c33;
+                border: 1px solid #fcc;
+            }
+            .alert.success {
+                background: #efe;
+                color: #3c3;
+                border: 1px solid #cfc;
+            }
+            .info-box {
+                background: #f5f5f5;
+                border-radius: 12px;
+                padding: 15px;
+                margin: 20px 0;
+                font-size: 14px;
+                color: #666;
+            }
+            .info-box i {
+                color: #667eea;
+                margin-right: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔐 <span class="bot-name">QUEEN BELLA V1</span></h1>
+            <div class="subtitle">WhatsApp Bot Pairing System</div>
+            
+            <div id="alert" class="alert"></div>
+            
+            <form id="pairForm" onsubmit="startPairing(event)">
+                <div class="form-group">
+                    <label>📱 Your WhatsApp Number</label>
+                    <input type="tel" id="phone" placeholder="254755660053" required>
+                    <small style="color: #999; display: block; margin-top: 5px;">Include country code (e.g., 254 for Kenya)</small>
+                </div>
+                
+                <div class="info-box">
+                    <i>ℹ️</i> After clicking "Generate Code", you'll receive an 8-digit code to link your WhatsApp.
+                </div>
+                
+                <button type="submit" id="submitBtn">
+                    <span id="btnText">Generate 8-Digit Code</span>
+                    <span id="btnSpinner" style="display: none;">⏳ Generating...</span>
+                </button>
+            </form>
+            
+            <div class="footer">
+                Powered by <strong>Rodgers</strong> • 
+                <a href="#" onclick="showInstructions()">How it works?</a>
+            </div>
+        </div>
+
+        <script>
+            async function startPairing(e) {
+                e.preventDefault();
+                
+                const phone = document.getElementById('phone').value.replace(/\\D/g, '');
+                const submitBtn = document.getElementById('submitBtn');
+                const btnText = document.getElementById('btnText');
+                const btnSpinner = document.getElementById('btnSpinner');
+                const alert = document.getElementById('alert');
+                
+                if (!phone || phone.length < 10) {
+                    showAlert('Please enter a valid phone number', 'error');
+                    return;
+                }
+                
+                // Disable button
+                submitBtn.disabled = true;
+                btnText.style.display = 'none';
+                btnSpinner.style.display = 'inline';
+                
+                try {
+                    const response = await fetch('/api/start-pair', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ phone })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Redirect to code entry page
+                        window.location.href = '/enter-code?phone=' + phone + '&code=' + data.pairCode;
+                    } else {
+                        showAlert(data.error || 'Failed to generate code', 'error');
+                        submitBtn.disabled = false;
+                        btnText.style.display = 'inline';
+                        btnSpinner.style.display = 'none';
+                    }
+                } catch (error) {
+                    showAlert('Network error. Please try again.', 'error');
+                    submitBtn.disabled = false;
+                    btnText.style.display = 'inline';
+                    btnSpinner.style.display = 'none';
+                }
+            }
+            
+            function showAlert(message, type) {
+                const alert = document.getElementById('alert');
+                alert.className = 'alert ' + type;
+                alert.textContent = message;
+                alert.style.display = 'block';
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 5000);
+            }
+            
+            function showInstructions() {
+                alert('1. Enter your WhatsApp number\\n2. Get 8-digit code\\n3. Open WhatsApp > Linked Devices\\n4. Enter the code\\n5. Session file will be sent to you');
+            }
+        </script>
+    </body>
+    </html>
+    `);
+});
+
+// ===== API: Start Pairing =====
+app.post('/api/start-pair', async (req, res) => {
+    const { phone } = req.body;
+    
+    if (!phone) {
+        return res.json({ success: false, error: 'Phone number required' });
+    }
+
+    // Clean phone number
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Generate pair code
+    const pairCode = generatePairCode();
+    
+    // Create session
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    const session = {
+        id: sessionId,
+        phone: cleanPhone,
+        pairCode: pairCode,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + (15 * 60 * 1000), // 15 minutes
+        status: 'pending',
+        socket: null
+    };
+    
+    activeSessions.set(pairCode, session);
+    
+    // Start WhatsApp connection for this session
+    startWhatsAppPairing(session);
+    
+    res.json({ 
+        success: true, 
+        pairCode: pairCode,
+        message: 'Code generated successfully'
+    });
+});
+
+// ===== PAGE 2: Enter Code =====
+app.get('/enter-code', (req, res) => {
+    const { phone, code } = req.query;
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>QUEEN BELLA V1 - Enter Code</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            h1 {
+                color: #333;
+                margin-bottom: 10px;
+                font-size: 28px;
+                text-align: center;
+            }
+            .code-display {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                font-size: 48px;
+                font-weight: bold;
+                text-align: center;
+                padding: 30px;
+                border-radius: 15px;
+                margin: 20px 0;
+                letter-spacing: 10px;
+                font-family: monospace;
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.02); }
+                100% { transform: scale(1); }
+            }
+            .instructions {
+                background: #f5f5f5;
+                border-radius: 12px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            .instructions ol {
+                margin-left: 20px;
+                color: #555;
+            }
+            .instructions li {
+                margin: 10px 0;
+            }
+            .status {
+                text-align: center;
+                padding: 15px;
+                border-radius: 10px;
+                margin: 20px 0;
+                font-weight: 500;
+            }
+            .status.pending {
+                background: #fff3cd;
+                color: #856404;
+            }
+            .status.success {
+                background: #d4edda;
+                color: #155724;
+            }
+            .status.error {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            .phone {
+                color: #667eea;
+                font-weight: bold;
+            }
+            .timer {
+                font-size: 18px;
+                text-align: center;
+                margin: 10px 0;
+                color: #666;
+            }
+            .footer {
+                margin-top: 25px;
+                text-align: center;
+                color: #999;
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔐 QUEEN BELLA V1</h1>
+            
+            <div class="code-display" id="code">${code}</div>
+            
+            <div class="phone">Phone: +${phone}</div>
+            
+            <div class="timer" id="timer">Code expires in 15:00</div>
+            
+            <div class="instructions">
+                <h3>📱 How to link:</h3>
+                <ol>
+                    <li>Open WhatsApp on your phone</li>
+                    <li>Go to <strong>Settings > Linked Devices</strong></li>
+                    <li>Tap on <strong>Link a Device</strong></li>
+                    <li>Enter the 8-digit code above</li>
+                    <li>Wait for session file to be sent to you</li>
+                </ol>
+            </div>
+            
+            <div class="status pending" id="status">
+                ⏳ Waiting for you to enter the code...
+            </div>
+            
+            <div class="footer">
+                Powered by <strong>Rodgers</strong>
+            </div>
+        </div>
+
+        <script>
+            const code = '${code}';
+            const phone = '${phone}';
+            let timeLeft = 15 * 60; // 15 minutes in seconds
+            
+            // Update timer
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    document.getElementById('timer').textContent = 'Code expired!';
+                    document.getElementById('status').textContent = '❌ Code expired. Please start over.';
+                    document.getElementById('status').className = 'status error';
+                } else {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    document.getElementById('timer').textContent = 
+                        \`Code expires in \${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+                }
+            }, 1000);
+            
+            // Check pairing status every 3 seconds
+            const checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/check-status?code=' + code);
+                    const data = await response.json();
+                    
+                    if (data.status === 'paired') {
+                        clearInterval(checkInterval);
+                        document.getElementById('status').textContent = '✅ Success! Session file sent to your WhatsApp!';
+                        document.getElementById('status').className = 'status success';
+                        
+                        // Redirect to download page after 3 seconds
+                        setTimeout(() => {
+                            window.location.href = '/success?code=' + code;
+                        }, 3000);
+                    }
+                } catch (e) {
+                    console.error('Status check failed:', e);
+                }
+            }, 3000);
+        </script>
+    </body>
+    </html>
+    `);
+});
+
+// ===== API: Check Pairing Status =====
+app.get('/api/check-status', (req, res) => {
+    const { code } = req.query;
+    
+    const session = activeSessions.get(code);
+    
+    if (!session) {
+        return res.json({ status: 'expired' });
+    }
+    
+    res.json({ status: session.status });
+});
+
+// ===== PAGE 3: Success & Download =====
+app.get('/success', (req, res) => {
+    const { code } = req.query;
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>QUEEN BELLA V1 - Success!</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+            }
+            .container {
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 500px;
+                width: 100%;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                text-align: center;
+            }
+            .success-icon {
+                font-size: 80px;
+                margin-bottom: 20px;
+            }
+            h1 {
+                color: #333;
+                margin-bottom: 20px;
+            }
+            .message {
+                background: #d4edda;
+                color: #155724;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+            }
+            .button {
+                display: inline-block;
+                padding: 15px 30px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: 600;
+                margin: 10px;
+                transition: transform 0.2s;
+            }
+            .button:hover {
+                transform: translateY(-2px);
+            }
+            .info {
+                background: #f5f5f5;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                text-align: left;
+            }
+            .info h3 {
+                color: #333;
+                margin-bottom: 10px;
+            }
+            .info pre {
+                background: #333;
+                color: #fff;
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+            }
+            .footer {
+                margin-top: 25px;
+                color: #999;
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✅</div>
+            <h1>Pairing Successful!</h1>
+            
+            <div class="message">
+                <strong>Session file has been sent to your WhatsApp!</strong>
+            </div>
+            
+            <div class="info">
+                <h3>📱 Next Steps:</h3>
+                <ol style="margin-left: 20px; color: #555;">
+                    <li>Check your WhatsApp for the session file</li>
+                    <li>Save the file as <strong>auth_info.json</strong></li>
+                    <li>Upload to your VPS/panel</li>
+                    <li>Start your bot with:</li>
+                </ol>
+                <pre>npm install
+npm start</pre>
+            </div>
+            
+            <a href="/download-session?code=${code}" class="button">📥 Download Session Again</a>
+            <a href="/" class="button" style="background: #666;">🏠 Pair Another Number</a>
+            
+            <div class="footer">
+                Powered by <strong>Rodgers</strong> • QUEEN BELLA V1
+            </div>
+        </div>
+    </body>
+    </html>
+    `);
+});
+
+// ===== API: Download Session =====
+app.get('/download-session', (req, res) => {
+    const { code } = req.query;
+    
+    const session = activeSessions.get(code);
+    
+    if (!session || !session.sessionData) {
+        return res.status(404).send('Session not found');
+    }
+    
+    res.download(session.sessionPath, `auth_info_${session.phone}.json`);
+});
+
+// ===== WhatsApp Pairing Function =====
+async function startWhatsAppPairing(session) {
+    try {
+        // Create session folder
+        const sessionPath = path.join(__dirname, 'sessions', `session_${session.pairCode}`);
+        await fs.ensureDir(sessionPath);
         
-        function downloadSession() {
-            window.location.href = '/download-session?code=' + document.getElementById('pairCode').value;
-        }
-    </script>
-</body>
-</html>
+        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+        
+        const sock = makeWASocket({
+            auth: state,
+            logger: pino({ level: 'silent' }),
+            printQRInTerminal: false
+        });
+        
+        // Store socket reference
+        session.socket = sock;
+        session.sessionPath = sessionPath;
+        
+        // Request pairing code
+        setTimeout(async () => {
+            try {
+                const code = await sock.requestPairingCode(session.phone);
+                console.log(`Pairing code for ${session.phone}: ${code}`);
+            } catch (e) {
+                console.error('Pairing code error:', e);
+            }
+        }, 2000);
+        
+        // Handle connection update
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect } = update;
+            
+            if (connection === 'open') {
+                console.log(`✅ Phone ${session.phone} paired successfully!`);
+                
+                // Update session status
+                session.status = 'paired';
+                
+                // Get session data
+                const sessionData = await fs.readJson(path.join(sessionPath, 'creds.json'));
+                session.sessionData = sessionData;
+                
+                // Send session file via WhatsApp
+                const sessionJsonPath = path.join(sessionPath, 'auth_info.json');
+                await fs.writeJson(sessionJsonPath, sessionData, { spaces: 2 });
+                
+                // Send the file to the user
+                await sock.sendMessage(session.phone + '@s.whatsapp.net', {
+                    document: await fs.readFile(sessionJsonPath),
+                    mimetype: 'application/json',
+                    fileName: `QUEEN_BELLA_SESSION_${session.phone}.json`,
+                    caption: `✅ *QUEEN BELLA V1 - Session File*\n\n` +
+                        `Your bot session is ready!\n\n` +
+                        `📱 Phone: +${session.phone}\n` +
+                        `🔐 Code: ${session.pairCode}\n\n` +
+                        `📌 *How to deploy:*\n` +
+                        `1. Save this file as "auth_info.json"\n` +
+                        `2. Place it in your bot's auth folder\n` +
+                        `3. Run: npm install && npm start\n\n` +
+                        `Powered by Rodgers`
+                });
+                
+                // Also send deployment instructions
+                await sock.sendMessage(session.phone + '@s.whatsapp.net', {
+                    text: `🚀 *DEPLOYMENT INSTRUCTIONS*\n\n` +
+                        `1️⃣ Upload the session file to your VPS/panel\n` +
+                        `2️⃣ Clone the bot: git clone https://github.com/your-repo/queen-bella.git\n` +
+                        `3️⃣ Replace auth folder with your session\n` +
+                        `4️⃣ Run: npm install\n` +
+                        `5️⃣ Start: npm start\n\n` +
+                        `Your bot will be online 24/7!`
+                });
+                
+                // Close socket after sending
+                setTimeout(() => {
+                    sock.end();
+                }, 5000);
+            }
+            
+            if (connection === 'close') {
+                console.log(`Connection closed for ${session.phone}`);
+            }
+        });
+        
+        // Save credentials
+        sock.ev.on('creds.update', saveCreds);
+        
+    } catch (error) {
+        console.error('WhatsApp pairing error:', error);
+        session.status = 'error';
+    }
+}
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`✅ Pairing server running on http://localhost:${PORT}`);
+    console.log(`📱 QUEEN BELLA V1 Pairing System`);
+    console.log(`👑 Powered by Rodgers`);
+});
