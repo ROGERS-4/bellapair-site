@@ -1,18 +1,15 @@
 {
-  "name": "queen-bella-pairing",
+  "name": "queen-bella-pair",
   "version": "1.0.0",
-  "description": "QUEEN BELLA V1 Pairing System",
-  "main": "server.js",
+  "description": "QUEEN BELLA V1 - WhatsApp Pair Code Generator",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "pm2": "pm2 start server.js --name queen-bella-pair"
+    "vercel-build": "echo \"Building...\""
   },
   "dependencies": {
     "express": "^4.18.2",
-    "@whiskeysockets/baileys": "^6.5.0",
-    "pino": "^8.17.2",
-    "fs-extra": "^11.2.0",
-    "cors": "^2.8.5",
-    "qrcode-terminal": "^0.12.0"
-  }
+    "cors": "^2.8.5"
+  },
+  "author": "Rodgers",
+  "license": "MIT"
 }
