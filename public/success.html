@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUEEN BELLA V1 - Success!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+            text-align: center;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .bot-name {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .message-box {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .phone-info {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .phone-number {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .steps {
+            text-align: left;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .steps h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .steps ol {
+            margin-left: 20px;
+            color: #555;
+        }
+        .steps li {
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            margin: 5px 0;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+        }
+        .button.secondary {
+            background: #25D366;
+        }
+        .channel-btn {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: #25D366;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h1><span class="bot-name">QUEEN BELLA V1</span></h1>
+        
+        <div class="message-box">
+            <strong>🎉 Pairing Successful!</strong>
+        </div>
+        
+        <div class="phone-info">
+            <div>WhatsApp Number:</div>
+            <div class="phone-number" id="phoneDisplay"></div>
+        </div>
+        
+        <div class="steps">
+            <h3>📱 Next Steps:</h3>
+            <ol>
+                <li>Check your WhatsApp for the session file</li>
+                <li>Save the file as <strong>auth_info.json</strong></li>
+                <li>Upload to your VPS/panel</li>
+                <li>Run your bot with:</li>
+            </ol>
+            <pre style="background: #333; color: #fff; padding: 10px; border-radius: 5px; margin-top: 10px;">
+npm install
+npm start</pre>
+        </div>
+        
+        <a href="/" class="button">🔄 Pair Another Number</a>
+        <a href="https://whatsapp.com/channel/0029VbBR3ib3LdQQlEG3vd1x" target="_blank" class="channel-btn">
+            📢 Join Our WhatsApp Channel
+        </a>
+        
+        <div class="footer">
+            <div>Powered by <strong>Rodgers</strong> | ©2026</div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const phone = urlParams.get('phone');
+        document.getElementById('phoneDisplay').textContent = phone;
+        
+        // Mark as paired in API
+        const code = urlParams.get('code');
+        if (code) {
+            fetch('/api/pair?action=paired', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+        }
+    </script>
+</body>
+</html>
