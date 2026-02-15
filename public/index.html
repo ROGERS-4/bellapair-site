@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>QUEEN BELLA V1 - Pairing</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUEEN BELLA V1 - Pairing</title>
     <style>
         * {
             margin: 0;
@@ -54,6 +55,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: bold;
+            font-size: 24px;
         }
         .form-group {
             margin-bottom: 25px;
@@ -65,9 +67,24 @@
             font-weight: 500;
             font-size: 14px;
         }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .country-code {
+            position: absolute;
+            left: 15px;
+            color: #667eea;
+            font-weight: 600;
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
         input {
             width: 100%;
-            padding: 15px;
+            padding: 15px 15px 15px 80px;
             border: 2px solid #e0e0e0;
             border-radius: 12px;
             font-size: 16px;
@@ -90,23 +107,32 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        button:hover {
+        button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .info-box {
             background: #f5f5f5;
             border-radius: 12px;
-            padding: 15px;
+            padding: 20px;
             margin: 20px 0;
             font-size: 14px;
             color: #666;
         }
-        .footer {
-            margin-top: 25px;
-            text-align: center;
-            color: #999;
-            font-size: 13px;
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .info-box ol {
+            margin-left: 20px;
+        }
+        .info-box li {
+            margin: 8px 0;
         }
         .alert {
             padding: 12px;
@@ -118,6 +144,45 @@
             background: #fee;
             color: #c33;
             border: 1px solid #fcc;
+            display: block;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        .channel-btn {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            padding: 12px;
+            background: #25D366;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        .channel-btn:hover {
+            transform: translateY(-2px);
+            background: #128C7E;
+        }
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .powered {
+            margin-top: 10px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -131,24 +196,41 @@
         <form id="pairForm" onsubmit="generateCode(event)">
             <div class="form-group">
                 <label>📱 Your WhatsApp Number</label>
-                <input type="tel" id="phone" placeholder="254755660053" required>
-                <small style="color: #999; display: block; margin-top: 5px;">Include country code (e.g., 254 for Kenya)</small>
+                <div class="input-wrapper">
+                    <span class="country-code">+254</span>
+                    <input type="tel" id="phone" placeholder="755660053" value="755660053" required>
+                </div>
+                <small style="color: #999; display: block; margin-top: 5px;">Enter number without country code (e.g., 755660053)</small>
             </div>
             
             <div class="info-box">
-                <strong>⚡ How it works:</strong><br>
-                1. Enter your number<br>
-                2. Get 8-digit code<br>
-                3. Open WhatsApp > Linked Devices<br>
-                4. Enter the code<br>
-                5. Code will be sent to your WhatsApp
+                <h3>⚡ How it works:</h3>
+                <ol>
+                    <li>Enter your WhatsApp number</li>
+                    <li>Click "Generate Code"</li>
+                    <li>Get 8-digit code</li>
+                    <li>Open WhatsApp > Settings > Linked Devices</li>
+                    <li>Enter the 8-digit code</li>
+                    <li>Your session will be ready!</li>
+                </ol>
             </div>
             
-            <button type="submit" id="submitBtn">Generate 8-Digit Code</button>
+            <button type="submit" id="submitBtn">
+                <span id="btnText">Generate 8-Digit Code</span>
+                <span id="btnSpinner" style="display: none;">⏳ Generating...</span>
+            </button>
         </form>
+
+        <a href="https://whatsapp.com/channel/0029VbBR3ib3LdQQlEG3vd1x" target="_blank" class="channel-btn">
+            📢 Join Our WhatsApp Channel
+        </a>
         
         <div class="footer">
-            Powered by <strong>Rodgers</strong>
+            <div>Powered by <strong>Rodgers</strong> | ©2026</div>
+            <div style="margin-top: 5px;">
+                <a href="#" onclick="showInstructions()">Help</a> • 
+                <a href="#" onclick="showContact()">Contact</a>
+            </div>
         </div>
     </div>
 
@@ -156,41 +238,47 @@
         async function generateCode(e) {
             e.preventDefault();
             
-            const phone = document.getElementById('phone').value.replace(/\D/g, '');
+            const phoneInput = document.getElementById('phone').value.replace(/\D/g, '');
+            const fullPhone = '254' + phoneInput;
             const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
             const alert = document.getElementById('alert');
             
-            if (!phone || phone.length < 10) {
+            if (!phoneInput || phoneInput.length < 9) {
                 showAlert('Please enter a valid phone number', 'error');
                 return;
             }
             
+            // Disable button
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Generating...';
+            btnText.style.display = 'none';
+            btnSpinner.style.display = 'inline';
             
             try {
-                const response = await fetch('generate.php', {
+                const response = await fetch('/api/pair?action=generate', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/json'
                     },
-                    body: 'phone=' + encodeURIComponent(phone)
+                    body: JSON.stringify({ phone: fullPhone })
                 });
                 
-                const text = await response.text();
+                const data = await response.json();
                 
-                if (text.includes('SUCCESS')) {
-                    const code = text.split(':')[1];
-                    window.location.href = 'code.php?phone=' + phone + '&code=' + code;
+                if (data.success) {
+                    window.location.href = `/code?code=${data.code}&phone=${fullPhone}`;
                 } else {
-                    showAlert('Failed to generate code. Try again.', 'error');
+                    showAlert(data.error || 'Failed to generate code', 'error');
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Generate 8-Digit Code';
+                    btnText.style.display = 'inline';
+                    btnSpinner.style.display = 'none';
                 }
             } catch (error) {
                 showAlert('Network error. Please try again.', 'error');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Generate 8-Digit Code';
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
             }
         }
         
@@ -203,6 +291,14 @@
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 5000);
+        }
+        
+        function showInstructions() {
+            alert('1. Enter your number\n2. Get 8-digit code\n3. Open WhatsApp > Linked Devices\n4. Enter code\n5. Wait for confirmation');
+        }
+        
+        function showContact() {
+            alert('For support, contact:\nWhatsApp: +254755660053');
         }
     </script>
 </body>
