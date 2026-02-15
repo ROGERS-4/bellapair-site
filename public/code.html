@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUEEN BELLA V1 - Your Code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        .bot-name {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .phone-display {
+            text-align: center;
+            color: #666;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .phone-number {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .code-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            letter-spacing: 10px;
+            font-family: monospace;
+            animation: pulse 2s infinite;
+            box-shadow: 0 10px 30px rgba(102,126,234,0.3);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .timer {
+            text-align: center;
+            font-size: 16px;
+            color: #666;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .timer.warning {
+            color: #e67e22;
+            font-weight: bold;
+        }
+        .steps {
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .steps h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .steps ol {
+            margin-left: 20px;
+            color: #555;
+        }
+        .steps li {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .steps .highlight {
+            color: #667eea;
+            font-weight: bold;
+            background: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .button {
+            display: inline-block;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            margin: 5px 0;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+        }
+        .button.secondary {
+            background: #666;
+        }
+        .channel-btn {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: #25D366;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .copy-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 <span class="bot-name">QUEEN BELLA V1</span></h1>
+        
+        <div class="phone-display">
+            Number: <span class="phone-number" id="phoneDisplay"></span>
+        </div>
+        
+        <div class="code-box" id="codeDisplay"></div>
+        
+        <button class="copy-btn" onclick="copyCode()">📋 Copy Code</button>
+        
+        <div class="timer" id="timer">Code expires in 15:00</div>
+        
+        <div class="steps">
+            <h3>📱 Quick Steps:</h3>
+            <ol>
+                <li>Open <strong>WhatsApp</strong> on your phone</li>
+                <li>Go to <span class="highlight">Settings > Linked Devices</span></li>
+                <li>Tap <span class="highlight">Link a Device</span></li>
+                <li>Enter code: <strong id="codeInSteps"></strong></li>
+                <li>Wait for confirmation</li>
+            </ol>
+        </div>
+        
+        <div class="status pending" id="status">
+            ⏳ Waiting for you to enter the code...
+        </div>
+        
+        <button class="button" onclick="checkStatus()" id="checkBtn">✅ I've Entered the Code</button>
+        <a href="/" class="button secondary">🔄 Start Over</a>
+        
+        <a href="https://whatsapp.com/channel/0029VbBR3ib3LdQQlEG3vd1x" target="_blank" class="channel-btn">
+            📢 Join Our WhatsApp Channel
+        </a>
+        
+        <div class="footer">
+            <div>Powered by <strong>Rodgers</strong> | ©2026</div>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const phone = urlParams.get('phone');
+        
+        // Display code and phone
+        document.getElementById('codeDisplay').textContent = code;
+        document.getElementById('codeInSteps').textContent = code;
+        document.getElementById('phoneDisplay').textContent = phone;
+        
+        // Timer
+        let timeLeft = 15 * 60; // 15 minutes in seconds
+        const timerElement = document.getElementById('timer');
+        
+        const timerInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerElement.textContent = '❌ Code expired!';
+                timerElement.classList.add('warning');
+                document.getElementById('status').textContent = 'Code expired. Please start over.';
+                document.getElementById('status').className = 'status error';
+                document.getElementById('checkBtn').disabled = true;
+            } else {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `⏰ Code expires in ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft < 60) {
+                    timerElement.classList.add('warning');
+                }
+            }
+        }, 1000);
+        
+        // Check status every 5 seconds
+        const checkInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/pair?action=verify&code=${code}`);
+                const data = await response.json();
+                
+                if (data.paired) {
+                    clearInterval(checkInterval);
+                    document.getElementById('status').textContent = '✅ Success! Your WhatsApp is linked!';
+                    document.getElementById('status').className = 'status success';
+                    
+                    // Redirect to success page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = `/success?code=${code}&phone=${phone}`;
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error('Status check failed:', e);
+            }
+        }, 5000);
+        
+        // Copy code function
+        function copyCode() {
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copied to clipboard!');
+            });
+        }
+        
+        // Check status manually
+        async function checkStatus() {
+            try {
+                const response = await fetch(`/api/pair?action=verify&code=${code}`);
+                const data = await response.json();
+                
+                if (data.paired) {
+                    document.getElementById('status').textContent = '✅ Success! Your WhatsApp is linked!';
+                    document.getElementById('status').className = 'status success';
+                    
+                    setTimeout(() => {
+                        window.location.href = `/success?code=${code}&phone=${phone}`;
+                    }, 2000);
+                } else {
+                    alert('Code not yet used. Please enter it in WhatsApp.');
+                }
+            } catch (e) {
+                alert('Error checking status. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>
