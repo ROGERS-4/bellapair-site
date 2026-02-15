@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QUEEN BELLA - Pairing</title>
+    <style>
+        body { font-family: Arial; max-width: 500px; margin: 50px auto; padding: 20px; }
+        input, button { padding: 10px; margin: 5px; width: 100%; }
+        .code { font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 QUEEN BELLA V1 Pairing</h1>
+    
+    <div id="step1">
+        <h3>Enter your 8-digit code:</h3>
+        <input type="text" id="pairCode" maxlength="8" placeholder="Enter code">
+        <button onclick="verifyCode()">Verify Code</button>
+    </div>
+    
+    <div id="step2" style="display:none;">
+        <h3>Your session is ready!</h3>
+        <p>Click below to download your session file:</p>
+        <button onclick="downloadSession()">Download Session</button>
+    </div>
+    
+    <script>
+        function verifyCode() {
+            const code = document.getElementById('pairCode').value;
+            if(code.length === 8) {
+                // Send to your backend
+                fetch(`/verify?code=${code}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.valid) {
+                            document.getElementById('step1').style.display = 'none';
+                            document.getElementById('step2').style.display = 'block';
+                        }
+                    });
+            }
+        }
+        
+        function downloadSession() {
+            window.location.href = '/download-session?code=' + document.getElementById('pairCode').value;
+        }
+    </script>
+</body>
+</html>
