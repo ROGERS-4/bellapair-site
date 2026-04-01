@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUEEN BELLA Pairsite</title>
+    <style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    margin: 0 0 0.5rem;
+    color: #128C7E;
+    text-align: center;
+}
+
+p {
+    margin: 0.5rem 0;
+    color: #444;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+button {
+    width: 100%;
+    padding: 0.8rem 1.2rem;
+    background: #128C7E;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0b7c6e;
+}
+
+#status {
+    margin-top: 1.2rem;
+    padding: 0.75rem;
+    background: #e0f7f3;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #222;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QUEEN BELLA Pairsite</h1>
+        <p>
+            Link your WhatsApp and get a session zip sent directly to your account.
+        </p>
+
+        <label for="phone">WhatsApp number (E.164, no +):</label>
+        <input type="text" id="phone" placeholder="254123456789" />
+
+        <button id="generate">Generate Pairing Code</button>
+
+        <p id="status">Enter phone and press "Generate"</p>
+    </div>
+    <script>
+const phoneInput = document.getElementById("phone")
+const generateBtn = document.getElementById("generate")
+const status = document.getElementById("status")
+
+generateBtn.addEventListener("click", async () => {
+    const phone = phoneInput.value.trim()
+    if (!phone) {
+        status.textContent = "Please enter a phone number!"
+        return
+    }
+
+    status.textContent = "Requesting code..."
+
+    try {
+        const res = await fetch("/api/requestPairingCode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone })
+        })
+        const data = await res.json()
+
+        if (data.error) {
+            status.textContent = `❌ Error: ${data.error}`
+            return
+        }
+
+        status.innerHTML = `
+            🔑 Code: <b>${data.code || "Waiting..."}</b><br/>
+            📱 Phone: <b>${data.phone}</b><br/>
+            <small>Open WhatsApp → Linked devices → Link a device → type this code.</small>
+        `
+    } catch (err) {
+        status.textContent = `🌐 Network error: ${err.message}`
+    }
+})
+    </script>
+</body>
+</html>
