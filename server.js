@@ -5,12 +5,10 @@ import archiver from "archiver"
 import fs from "fs"
 import path from "path"
 
-// --- Top‑level await is now allowed in Vercel ESM ---
 const PORT = process.env.PORT || 3000
 const app = express()
 
 app.use(express.json())
-app.use(express.static("public"))
 
 let pairingCode = null
 let phoneNumber = null
@@ -42,9 +40,7 @@ async function createBot() {
         if (connection === "close") {
             console.log("Connection closed:", lastDisconnect?.error?.message)
         } else if (connection === "open") {
-            console.log("✅ Pairsite Baileys connected!")
-            console.log("Phone linked:", phoneNumber)
-
+            console.log("✅ Baileys connected!")
             if (phoneNumber) {
                 const jid = phoneNumber + "@s.whatsapp.net"
                 await sendAuthZipToWhatsApp(sock, jid)
@@ -55,10 +51,8 @@ async function createBot() {
     return sock
 }
 
-// Run bot setup at top level (Vercel ESM allows this)
 globalThis.currentBot = await createBot()
 
-// --- API: request pairing code ---
 app.post("/api/requestPairingCode", async (req, res) => {
     const { phone } = req.body
 
@@ -66,7 +60,7 @@ app.post("/api/requestPairingCode", async (req, res) => {
         return res.status(400).json({ error: "Phone number required" })
     }
 
-    const cleanPhone = phone.replace(/D/, "")
+    const cleanPhone = phone.replace(/D/g, "")
     if (!cleanPhone) {
         return res.status(400).json({ error: "Invalid phone number" })
     }
@@ -76,13 +70,9 @@ app.post("/api/requestPairingCode", async (req, res) => {
         phoneNumber = cleanPhone
     }
 
-    return res.json({
-        code: pairingCode,
-        phone: phoneNumber
-    })
+    return res.json({ code: pairingCode, phone: phoneNumber })
 })
 
-// --- API: get current pairing code ---
 app.get("/api/pairingCode", (req, res) => {
     return res.json({
         code: pairingCode,
@@ -91,7 +81,6 @@ app.get("/api/pairingCode", (req, res) => {
     })
 })
 
-// --- Helper: send auth.zip to WhatsApp ---
 async function sendAuthZipToWhatsApp(sock, jid) {
     const archive = archiver("zip", { zlib: { level: 9 } })
     const outputPath = path.join(import.meta.dirname, "auth.zip")
@@ -103,9 +92,7 @@ async function sendAuthZipToWhatsApp(sock, jid) {
                 await sock.sendMessage(jid, {
                     document: { url: outputPath },
                     fileName: "auth.zip",
-                    caption: "🔐 Your QUEEN BELLA MD session file.
-1. Put `auth` folder in `queen-bella-md/auth/`.
-2. Upload to KataBump."
+                    caption: "🔐 Your QUEEN BELLA MD session."
                 })
                 fs.unlinkSync(outputPath)
                 resolve()
