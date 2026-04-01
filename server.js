@@ -5,6 +5,7 @@ import archiver from "archiver"
 import fs from "fs"
 import path from "path"
 
+// --- Top‑level await is now allowed in Vercel ESM ---
 const PORT = process.env.PORT || 3000
 const app = express()
 
@@ -15,14 +16,13 @@ let pairingCode = null
 let phoneNumber = null
 let currentBot = null
 
-// Ensure `auth` folder exists
-const authDir = path.join(__dirname, "auth")
-if (!fs.existsSync(authDir)) {
-    fs.mkdirSync(authDir, { recursive: true })
+const authPath = path.join(import.meta.dirname, "auth")
+if (!fs.existsSync(authPath)) {
+    fs.mkdirSync(authPath, { recursive: true })
 }
 
 async function createBot() {
-    const { state, saveCreds } = await useMultiFileAuthState("auth")
+    const { state, saveCreds } = await useMultiFileAuthState(authPath)
 
     const sock = makeWASocket({
         auth: state,
@@ -43,8 +43,8 @@ async function createBot() {
             console.log("Connection closed:", lastDisconnect?.error?.message)
         } else if (connection === "open") {
             console.log("✅ Pairsite Baileys connected!")
+            console.log("Phone linked:", phoneNumber)
 
-            // SEND auth.zip to the user's WhatsApp
             if (phoneNumber) {
                 const jid = phoneNumber + "@s.whatsapp.net"
                 await sendAuthZipToWhatsApp(sock, jid)
@@ -55,44 +55,46 @@ async function createBot() {
     return sock
 }
 
-currentBot = await createBot()
+// Run bot setup at top level (Vercel ESM allows this)
+globalThis.currentBot = await createBot()
 
 // --- API: request pairing code ---
 app.post("/api/requestPairingCode", async (req, res) => {
     const { phone } = req.body
+
     if (!phone) {
         return res.status(400).json({ error: "Phone number required" })
     }
 
-    const cleanPhone = phone.replace(/D/g, "")
+    const cleanPhone = phone.replace(/D/, "")
     if (!cleanPhone) {
         return res.status(400).json({ error: "Invalid phone number" })
     }
 
-    if (!currentBot.authState.creds.registered) {
-        pairingCode = await currentBot.requestPairingCode(cleanPhone)
+    if (!globalThis.currentBot.authState.creds.registered) {
+        pairingCode = await globalThis.currentBot.requestPairingCode(cleanPhone)
         phoneNumber = cleanPhone
     }
 
     return res.json({
         code: pairingCode,
-        phone: phoneNumber,
+        phone: phoneNumber
     })
 })
 
-// --- API: get current pairing code (for UI) ---
+// --- API: get current pairing code ---
 app.get("/api/pairingCode", (req, res) => {
     return res.json({
         code: pairingCode,
         phone: phoneNumber,
-        registered: !!currentBot?.authState?.creds?.registered
+        registered: !!globalThis.currentBot?.authState?.creds?.registered
     })
 })
 
-// --- Helper: send auth.zip as WhatsApp document ---
+// --- Helper: send auth.zip to WhatsApp ---
 async function sendAuthZipToWhatsApp(sock, jid) {
     const archive = archiver("zip", { zlib: { level: 9 } })
-    const outputPath = path.join(__dirname, "auth.zip")
+    const outputPath = path.join(import.meta.dirname, "auth.zip")
     const output = fs.createWriteStream(outputPath)
 
     return new Promise((resolve, reject) => {
@@ -101,9 +103,11 @@ async function sendAuthZipToWhatsApp(sock, jid) {
                 await sock.sendMessage(jid, {
                     document: { url: outputPath },
                     fileName: "auth.zip",
-                    caption: "🔐 Your QUEEN BELLA MD session files. Put this in `queen-bella-md/auth/` and upload to KataBump."
+                    caption: "🔐 Your QUEEN BELLA MD session file.
+1. Put `auth` folder in `queen-bella-md/auth/`.
+2. Upload to KataBump."
                 })
-                console.log("✅ Sent auth.zip to WhatsApp:", jid)
+                fs.unlinkSync(outputPath)
                 resolve()
             } catch (err) {
                 console.error("Failed to send auth.zip:", err.message)
@@ -118,7 +122,6 @@ async function sendAuthZipToWhatsApp(sock, jid) {
 
         archive.pipe(output)
 
-        const authPath = path.join(__dirname, "auth")
         if (fs.existsSync(authPath)) {
             archive.directory(authPath, "auth")
         }
